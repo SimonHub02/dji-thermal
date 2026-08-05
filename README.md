@@ -6,6 +6,7 @@
 
 - `POST /api/thermal/analyze`：返回图像尺寸、最高/最低/平均温度及极值坐标。
 - `POST /api/thermal/point`：返回指定像素坐标的温度，矩阵索引为 `temperature[y][x]`。
+- `POST /api/thermal/region`：返回指定矩形区域的最高/最低/平均温度及极值坐标。
 - HTTP 流式下载，支持连接/读取超时、失败重试、指数退避和文件大小限制。
 - 进程内 TTL + LRU 缓存；相同 URL 的并发首次请求只下载、解析一次。
 - SDK 调用与接口层隔离，确保每个成功创建的 DIRP 句柄最终都会销毁。
@@ -135,6 +136,36 @@ curl -X POST http://localhost:8000/api/thermal/point \
 ```
 
 点温接口与全图接口共享缓存。坐标超界会返回 HTTP 422。
+
+### 区域温度分析
+
+`(x, y)` 是区域左上角，`(x1, y1)` 是区域右下角，两个端点都包含在统计范围内。
+
+```bash
+curl -X POST http://localhost:8000/api/thermal/region \
+  -H 'Content-Type: application/json' \
+  -d '{"fileUrl":"http://minio.example.com/bucket/DJI_0001_R.JPG","x":100,"y":100,"x1":199,"y1":199}'
+```
+
+```json
+{
+  "success": true,
+  "fileUrl": "http://minio.example.com/bucket/DJI_0001_R.JPG",
+  "x": 100,
+  "y": 100,
+  "x1": 199,
+  "y1": 199,
+  "width": 100,
+  "height": 100,
+  "maxTemperature": 48.6,
+  "minTemperature": 25.2,
+  "averageTemperature": 34.7,
+  "maxPoint": {"x": 153, "y": 172},
+  "minPoint": {"x": 108, "y": 115}
+}
+```
+
+区域极值点使用原图绝对坐标。必须满足 `0 <= x <= x1 < 图片宽度`、`0 <= y <= y1 < 图片高度`；不合法或越界时返回 HTTP 422。区域接口同样复用已经解析的完整温度矩阵，不会重复下载或调用 SDK。
 
 错误响应统一为：
 

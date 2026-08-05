@@ -49,6 +49,24 @@ class ThermalAnalysis:
     temperatures: npt.NDArray[np.float32]
 
 
+@dataclass(frozen=True, slots=True)
+class ThermalRegionAnalysis:
+    file_url: str
+    x: int
+    y: int
+    x1: int
+    y1: int
+    width: int
+    height: int
+    max_temperature: float
+    min_temperature: float
+    average_temperature: float
+    max_x: int
+    max_y: int
+    min_x: int
+    min_y: int
+
+
 @dataclass(slots=True)
 class _CacheEntry:
     value: ThermalAnalysis
@@ -140,6 +158,67 @@ class ThermalService:
                 f"width={analysis.width}, height={analysis.height}"
             )
         return round(float(analysis.temperatures[y, x]), 1)
+
+    async def analyze_region(
+        self,
+        file_url: str,
+        x: int,
+        y: int,
+        x1: int,
+        y1: int,
+    ) -> ThermalRegionAnalysis:
+        if x < 0 or y < 0 or x1 < 0 or y1 < 0 or x > x1 or y > y1:
+            raise CoordinateOutOfBoundsError(
+                "region must use non-negative coordinates with x <= x1 and y <= y1"
+            )
+
+        analysis = await self.analyze(file_url)
+        if x1 >= analysis.width or y1 >= analysis.height:
+            raise CoordinateOutOfBoundsError(
+                f"region ({x}, {y})-({x1}, {y1}) is outside image bounds "
+                f"width={analysis.width}, height={analysis.height}"
+            )
+
+        # x1/y1 are inclusive coordinates, hence the +1 slice boundary.
+        temperatures = analysis.temperatures[y : y1 + 1, x : x1 + 1]
+        max_flat_index = int(np.argmax(temperatures))
+        min_flat_index = int(np.argmin(temperatures))
+        relative_max_y, relative_max_x = np.unravel_index(
+            max_flat_index, temperatures.shape
+        )
+        relative_min_y, relative_min_x = np.unravel_index(
+            min_flat_index, temperatures.shape
+        )
+
+        region = ThermalRegionAnalysis(
+            file_url=file_url,
+            x=x,
+            y=y,
+            x1=x1,
+            y1=y1,
+            width=x1 - x + 1,
+            height=y1 - y + 1,
+            max_temperature=round(float(np.max(temperatures)), 1),
+            min_temperature=round(float(np.min(temperatures)), 1),
+            average_temperature=round(float(np.mean(temperatures)), 1),
+            max_x=x + int(relative_max_x),
+            max_y=y + int(relative_max_y),
+            min_x=x + int(relative_min_x),
+            min_y=y + int(relative_min_y),
+        )
+        logger.info(
+            "thermal region fileUrl=%s x=%d y=%d x1=%d y1=%d "
+            "minTemperature=%.1f maxTemperature=%.1f averageTemperature=%.1f",
+            file_url,
+            x,
+            y,
+            x1,
+            y1,
+            region.min_temperature,
+            region.max_temperature,
+            region.average_temperature,
+        )
+        return region
 
     async def _download_and_parse(self, file_url: str) -> ThermalAnalysis:
         download_started = time.perf_counter()

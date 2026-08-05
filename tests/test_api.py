@@ -38,7 +38,7 @@ class InvalidRJPEGFakeSDK(FakeSDK):
         raise SDKError("dirp_create_from_rjpeg", -7)
 
 
-def test_analyze_and_point_contracts() -> None:
+def test_analyze_point_and_region_contracts() -> None:
     settings = load_settings()
     service = ThermalService(  # type: ignore[arg-type]
         FakeSDK(), FakeDownloader(), settings.cache
@@ -56,6 +56,16 @@ def test_analyze_and_point_contracts() -> None:
                 "y": 0,
             },
         )
+        region = client.post(
+            "/api/thermal/region",
+            json={
+                "fileUrl": "http://objects.example/image_R.JPG",
+                "x": 0,
+                "y": 0,
+                "x1": 1,
+                "y1": 0,
+            },
+        )
 
     assert analyze.status_code == 200
     assert analyze.json() == {
@@ -71,6 +81,22 @@ def test_analyze_and_point_contracts() -> None:
     }
     assert point.status_code == 200
     assert point.json() == {"x": 1, "y": 0, "temperature": 40.0}
+    assert region.status_code == 200
+    assert region.json() == {
+        "success": True,
+        "fileUrl": "http://objects.example/image_R.JPG",
+        "x": 0,
+        "y": 0,
+        "x1": 1,
+        "y1": 0,
+        "width": 2,
+        "height": 1,
+        "maxTemperature": 40.0,
+        "minTemperature": 20.0,
+        "averageTemperature": 30.0,
+        "maxPoint": {"x": 1, "y": 0},
+        "minPoint": {"x": 0, "y": 0},
+    }
 
 
 def test_point_out_of_bounds_returns_structured_error() -> None:

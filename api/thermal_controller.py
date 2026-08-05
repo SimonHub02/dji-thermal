@@ -9,6 +9,8 @@ from model.thermal_models import (
     AnalyzeResponse,
     PointRequest,
     PointResponse,
+    RegionRequest,
+    RegionResponse,
 )
 from service.thermal_service import ThermalService
 
@@ -40,3 +42,18 @@ async def point_temperature(
         str(request.file_url), request.x, request.y
     )
     return PointResponse(x=request.x, y=request.y, temperature=temperature)
+
+
+@router.post("/region", response_model=RegionResponse, response_model_by_alias=True)
+async def region_temperature(
+    request: RegionRequest,
+    service: ThermalServiceDependency,
+) -> RegionResponse:
+    analysis = await service.analyze_region(
+        str(request.file_url),
+        x=request.x,
+        y=request.y,
+        x1=request.x1,
+        y1=request.y1,
+    )
+    return RegionResponse.from_analysis(analysis)

@@ -129,3 +129,40 @@ async def test_analyze_accepts_mpo_container_used_by_dji_rjpeg() -> None:
     analysis = await service.analyze("http://objects.example/dji-rjpeg.jpg")
 
     assert (analysis.width, analysis.height) == (3, 2)
+
+
+@pytest.mark.asyncio
+async def test_region_calculates_inclusive_bounds_and_absolute_points() -> None:
+    service = ThermalService(  # type: ignore[arg-type]
+        FakeSDK(), FakeDownloader(jpeg_bytes()), CacheSettings(4, 60)
+    )
+
+    region = await service.analyze_region(
+        "http://objects.example/a.jpg", x=1, y=0, x1=2, y1=1
+    )
+
+    assert region.width == 2
+    assert region.height == 2
+    assert region.max_temperature == 30.0
+    assert region.min_temperature == -5.0
+    assert region.average_temperature == 10.8
+    assert (region.max_x, region.max_y) == (2, 0)
+    assert (region.min_x, region.min_y) == (1, 0)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("x", "y", "x1", "y1"),
+    [(2, 0, 1, 1), (0, 1, 2, 0), (0, 0, 3, 1), (0, 0, 2, 2)],
+)
+async def test_region_rejects_reversed_or_out_of_bounds_coordinates(
+    x: int, y: int, x1: int, y1: int
+) -> None:
+    service = ThermalService(  # type: ignore[arg-type]
+        FakeSDK(), FakeDownloader(jpeg_bytes()), CacheSettings(4, 60)
+    )
+
+    with pytest.raises(CoordinateOutOfBoundsError):
+        await service.analyze_region(
+            "http://objects.example/a.jpg", x=x, y=y, x1=x1, y1=y1
+        )
