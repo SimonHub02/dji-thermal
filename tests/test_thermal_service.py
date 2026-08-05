@@ -44,9 +44,18 @@ class FakeSDK:
         self.destroy_calls += 1
 
 
-def jpeg_bytes() -> bytes:
+def jpeg_bytes(image_format: str = "JPEG") -> bytes:
     output = BytesIO()
-    Image.new("RGB", (3, 2), color=(0, 0, 0)).save(output, format="JPEG")
+    image = Image.new("RGB", (3, 2), color=(0, 0, 0))
+    if image_format == "MPO":
+        image.save(
+            output,
+            format="MPO",
+            save_all=True,
+            append_images=[Image.new("RGB", (3, 2), color=(0, 0, 0))],
+        )
+    else:
+        image.save(output, format=image_format)
     return output.getvalue()
 
 
@@ -109,3 +118,14 @@ async def test_concurrent_same_url_requests_are_single_flight() -> None:
     assert first is second
     assert downloader.calls == 1
     assert sdk.create_calls == 1
+
+
+@pytest.mark.asyncio
+async def test_analyze_accepts_mpo_container_used_by_dji_rjpeg() -> None:
+    service = ThermalService(  # type: ignore[arg-type]
+        FakeSDK(), FakeDownloader(jpeg_bytes("MPO")), CacheSettings(4, 60)
+    )
+
+    analysis = await service.analyze("http://objects.example/dji-rjpeg.jpg")
+
+    assert (analysis.width, analysis.height) == (3, 2)

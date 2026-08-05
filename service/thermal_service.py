@@ -210,7 +210,9 @@ class ThermalService:
             raise InvalidRJPEGError("downloaded file is not a JPEG image")
         try:
             with Image.open(BytesIO(data)) as image:
-                if image.format != "JPEG":
+                # DJI radiometric files are JPEG containers, but Pillow reports
+                # the multi-picture variant used by current cameras as MPO.
+                if image.format not in {"JPEG", "MPO"}:
                     raise InvalidRJPEGError("downloaded file is not a JPEG image")
                 image.verify()
         except (UnidentifiedImageError, OSError) as exc:
