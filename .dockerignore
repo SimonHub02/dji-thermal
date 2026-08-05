@@ -1,0 +1,15 @@
+.git
+.codegraph
+.idea
+.venv
+__pycache__
+.pytest_cache
+*.pyc
+tests
+sdk/dataset
+sdk/doc
+sdk/sample
+sdk/utility
+sdk/tsdk-core/api
+sdk/tsdk-core/lib/windows
+sdk/tsdk-core/lib/linux/release_x86

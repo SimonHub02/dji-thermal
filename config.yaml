@@ -1,0 +1,20 @@
+app:
+  host: 0.0.0.0
+  port: 8000
+  log_level: info
+
+sdk:
+  library_path: sdk/tsdk-core/lib/linux/release_x64/libdirp.so
+  max_concurrent_calls: 4
+
+download:
+  connect_timeout_seconds: 5
+  read_timeout_seconds: 30
+  retries: 2
+  retry_backoff_seconds: 0.5
+  max_file_size_mb: 50
+  follow_redirects: true
+
+cache:
+  max_entries: 128
+  ttl_seconds: 3600
