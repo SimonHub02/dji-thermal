@@ -4,7 +4,14 @@ app:
   log_level: info
 
 sdk:
-  library_path: sdk/tsdk-core/lib/linux/release_x64/libdirp.so
+  # docker
+  #library_path: /opt/dji/thermal-sdk/libdirp.so
+
+  #linux
+  #library_path: sdk/tsdk-core/lib/linux/release_x64/libdirp.so
+
+  #windows
+  library_path: sdk/tsdk-core/lib/windows/release_x64/libdirp.dll
   max_concurrent_calls: 4
 
 download:
